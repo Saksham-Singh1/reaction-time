@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reaction Time Game with Image Capture and API Call</title>
+    <style>
+        /* Centering and styling */
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        #game {
+            text-align: center;
+        }
+
+        #arrow {
+            font-size: 150px;
+            font-weight: 900;
+            color: red;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #result {
+            font-size: 30px;
+            margin-top: 30px;
+        }
+
+        video, canvas {
+            display: none; /* Hide video and canvas elements */
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="arrow"></div>
+        <div id="result"></div>
+        <video id="video" autoplay></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        // Select DOM elements
+        const arrowElement = document.getElementById('arrow');
+        const resultElement = document.getElementById('result');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        // Initialize variables
+        let arrowDisplayedTime;
+        let lastClickTime;
+
+        // Set up the webcam stream
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+            });
+
+        // Utility function to show the recover arrow for one second
+        function showRecoverArrow(recoveryElapsedTime) {
+            arrowElement.textContent = '↑'; // Display the recover arrow
+            arrowElement.style.color = 'black';
+            resultElement.textContent = `Recover! Elapsed time: ${recoveryElapsedTime} ms. No click needed.`;
+
+            // Automatically show a new random arrow after 1 second
+            setTimeout(showRandomArrow, 1000);
+        }
+
+        // Utility function to display a random arrow (left or right)
+        function showRandomArrow() {
+            const arrowType = Math.random();
+            let arrow;
+
+            if (arrowType < 0.5) {
+                arrow = '←';  // Left arrow
+                resultElement.textContent = 'Click the left mouse button!';
+            } else {
+                arrow = '→';  // Right arrow
+                resultElement.textContent = 'Click the right mouse button!';
+            }
+
+            // Set the arrow display
+            arrowElement.textContent = arrow;
+            arrowElement.style.color = 'red';
+
+            // Record the time and direction of the displayed arrow
+            arrowDisplayedTime = Date.now();
+            arrowElement.dataset.arrowDirection = arrow;
+        }
+
+        // Function to capture an image and send it to the server
+        function captureAndSendImage(elapsedTime, arrowDirection) {
+            // Set canvas size to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to a blob (image file)
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob, 'captured_image.png');
+                formData.append('elapsedTime', elapsedTime);        // Add elapsed time
+                formData.append('arrowDirection', arrowDirection);  // Add arrow direction
+
+                // Send the image and data to the server
+                fetch('/api/upload', {  // Replace '/api/upload' with your API endpoint
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => console.log('Image and data uploaded successfully:', data))
+                .catch(error => console.error('Error uploading image and data:', error));
+            }, 'image/png');
+        }
+
+        // Event listener for mouse clicks
+        document.addEventListener('mousedown', (event) => {
+            const elapsedTime = Date.now() - arrowDisplayedTime;
+            const arrowDirection = arrowElement.textContent; // Get the displayed arrow
+
+            if (arrowDirection === '↑') {
+                resultElement.textContent = 'You clicked on the straight arrow! No reaction time measured.';
+            } else {
+                resultElement.textContent = `You clicked! Time taken to click: ${elapsedTime} ms`;
+                captureAndSendImage(elapsedTime, arrowDirection);  // Capture image and send to the server
+            }
+
+            lastClickTime = Date.now();
+            const recoveryElapsedTime = lastClickTime - arrowDisplayedTime;
+
+            // Show the recover arrow after a click
+            showRecoverArrow(recoveryElapsedTime);
+        });
+
+        // Prevent default right-click context menu
+        document.addEventListener('contextmenu', (event) => event.preventDefault());
+
+        // Start the game by showing the initial up arrow
+        showRecoverArrow(0);
+    </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Picture on Mouse Click</title>
+    <style>
+        #video, #canvas {
+            display: block;
+            margin: auto;
+            max-width: 100%;
+        }
+        #canvas {
+            display: none; /* Hide canvas by default */
+        }
+    </style>
+</head>
+<body>
+    <h2>Click anywhere to capture and download a photo</h2>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // Get video and canvas elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        // Request access to the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream; // Display webcam feed in the video element
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+            });
+
+        // Add an event listener for mouse clicks
+        document.addEventListener('click', () => {
+            // Set canvas size to match the video feed
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas content to a data URL
+            const imageDataURL = canvas.toDataURL('image/png');
+
+            // Create a download link
+            const link = document.createElement('a');
+            link.href = imageDataURL;
+            link.download = 'captured_image.png'; // Specify the file name
+            document.body.appendChild(link); // Append the link to the body
+            link.click(); // Programmatically click the link to trigger the download
+            document.body.removeChild(link); // Remove the link from the document
+        });
+    </script>
+</body>
+</html>
