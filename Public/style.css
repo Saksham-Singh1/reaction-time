@@ -1,0 +1,23 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    text-align: center;
+}
+
+.arrow {
+    font-size: 150px;    /* Increase the font size to make it big */
+    color: red;           /* Set the arrow color to red */
+    margin-bottom: 20px;
+}
+
+#result {
+    font-size: 24px;
+    color: #333;
+}
